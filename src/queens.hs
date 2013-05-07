@@ -1,9 +1,7 @@
 import Data.Tree (Tree(..))
-import Data.List (union, (\\), intersect) 
---unlines, intersperse, unfoldr)
---import Data.Foldable (maximumBy)
+import Data.List (union, (\\), intersect)
+import Control.Applicative ( (<$>) )
 import Data.Tree.Zipper 
--- (childAt, fromTree, tree, parent, Full, TreePos)
 import Data.Maybe (fromJust)
 import Text.Read (readMaybe)
 import System.Console.Haskeline (outputStrLn, getInputLine, runInputT, defaultSettings, InputT)
@@ -12,7 +10,7 @@ type Pos = (Integer, Integer)
 type Board = [Pos] 
 
 
-data Command = Auto Integer | Up | Go Integer deriving (Read)
+data Command = Auto Integer | Up | Top | Go Integer deriving (Read)
 
 main :: IO ()
 main = foo 9
@@ -21,7 +19,7 @@ foo :: Integer -> IO ()
 foo n = runInputT defaultSettings (loop $ fromTree $ prunedTree n)
   where added old new = head $ new \\ old 
         showOpt options curBoard = outputStrLn $ foldr (\(a,b) y -> show a ++ ":" ++ show b ++ "  " ++ y) ""   
-                  (zip [0..] $ map (added curBoard) options) 
+                  (zip [(0::Int)..] $ map (added curBoard) options) 
 
         loop :: TreePos Full Board -> InputT IO ()
         loop treePos = do
@@ -34,6 +32,7 @@ foo n = runInputT defaultSettings (loop $ fromTree $ prunedTree n)
 
 
 interpret :: TreePos Full Board -> Command -> Either String (TreePos Full Board)
+interpret treePos Top = Right $ root treePos
 interpret treePos Up | isRoot treePos  = Left "We are at the top"
 interpret treePos Up  = Right $ fromJust $ parent treePos 
 
@@ -51,13 +50,14 @@ interpret treePos (Auto n)   = case null found of
 handleCommand :: TreePos Full Board -> InputT IO (TreePos Full Board)
 handleCommand  treePos = do  
   inp <- getInputLine "> "
-  case readMaybe (fromJust inp) of
-    Nothing   -> do outputStrLn "Invalid Command (Have Go N, Up and Auto N so far)"
-                    handleCommand treePos
-    Just x    -> case interpret treePos x of
-                    Left s  -> do outputStrLn s
-                                  handleCommand treePos
-                    Right t -> return t
+  case readMaybe <$> inp of
+    Nothing        -> return treePos --haha
+    Just Nothing   -> do outputStrLn "Invalid Command (Have Go N, Up, Top and Auto N so far)"
+                         handleCommand treePos
+    Just (Just x)    -> case interpret treePos x of
+                          Left s  -> do outputStrLn s
+                                        handleCommand treePos
+                          Right t -> return t
 
 findPosBelow :: (Tree Board -> Bool) -> TreePos Full Board -> [TreePos Full Board]
 findPosBelow f pos | hasChildren pos = [pos | f (tree pos)] ++ concatMap (findPosBelow f) childs
