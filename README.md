@@ -9,3 +9,5 @@ Up     -  goes up
 
 Auto N -  looks for a board with at least N queens below the tree
 	  that is focused.
+
+Top   - all the way to the top!
