@@ -1,6 +1,7 @@
-import Data.Tree (Tree(..), Forest, flatten)
-import Data.List (union, (\\), intersect, unlines, intersperse, unfoldr)
-import Data.Foldable (maximumBy)
+import Data.Tree (Tree(..))
+import Data.List (union, (\\), intersect) 
+--unlines, intersperse, unfoldr)
+--import Data.Foldable (maximumBy)
 import Data.Tree.Zipper 
 -- (childAt, fromTree, tree, parent, Full, TreePos)
 import Data.Maybe (fromJust)
@@ -13,6 +14,7 @@ type Board = [Pos]
 
 data Command = Auto Integer | Up | Go Integer deriving (Read)
 
+main :: IO ()
 main = foo 9
  
 foo :: Integer -> IO ()
@@ -58,13 +60,13 @@ handleCommand  treePos = do
                     Right t -> return t
 
 findPosBelow :: (Tree Board -> Bool) -> TreePos Full Board -> [TreePos Full Board]
-findPosBelow f pos | hasChildren pos = l ++ concatMap (findPosBelow f) children
-  where children = unfoldr' next fc
+findPosBelow f pos | hasChildren pos = l ++ concatMap (findPosBelow f) childs
+  where childs = unfoldr' next fc
         fc = fromJust $ firstChild pos
         l = if f (tree pos) then [pos] else [] 
 
 findPosBelow f pos | f (tree pos) = [pos]
-findPosBelow f pos = [] 
+findPosBelow _ _ = [] 
 
 unfoldr'      :: (a -> Maybe a) -> a -> [a]
 unfoldr' f b  =
@@ -72,9 +74,6 @@ unfoldr' f b  =
    Just a   -> a : unfoldr' f a
    Nothing  -> []
 
-
-queens :: Integer -> Integer -> Board
-queens maxlen size = head $ filter (\x -> length x >= fromInteger maxlen) $ flatten $ prunedTree size
 
 prunedTree :: Integer -> Tree Board
 prunedTree n = pruneTree n $ buildTree n (Node [] [])
@@ -85,15 +84,9 @@ positions :: Integer -> [Pos]
 positions size = [ (x, y) | x <- [1..size], y <- [1..size]]
 
 
-initForest :: Integer -> Forest Board
-initForest size = map (\x -> Node [x] []) (positions size)
-
-buildForest :: Integer -> Forest Board
-buildForest size = map (buildTree size) $ initForest size
-
 buildTree :: Integer -> Tree Board -> Tree Board
 buildTree size (Node node _) = Node node descendents
-    where   descendents = [buildTree size (Node foo []) | foo <- newBoards]
+    where   descendents = [buildTree size (Node board []) | board <- newBoards]
             newBoards = map (:node) uniquePositions
             uniquePositions = positions size \\ node
 
@@ -101,8 +94,8 @@ pruneTree :: Integer -> Tree Board -> Tree Board
 pruneTree size (Node node subTrees) = Node node prunedSubs
     where prunedSubs = map (pruneTree size) goodDescendents
           goodDescendents = filter (isGood node) subTrees
-          isGood node subTree = staysConsistent size node 
-                            (head $ rootLabel subTree \\ node) 
+          isGood n subTree = staysConsistent size n 
+                            (head $ rootLabel subTree \\ n) 
                             --can assume that new label arises by adding one node
 
 staysConsistent :: Integer -> Board -> Pos -> Bool
@@ -122,11 +115,6 @@ activeNeighborhood size (x,y) = active
                                 , x + d > 0, x + d <= size
                                 , y - d > 0, y - d <= size]
           active = line1 `union` line2 `union` diag1 `union` diag2
-
-
-longest :: Tree Board -> Board
-longest = maximumBy ord
-    where ord a b = length a `compare` length b
 
 
 prettyBoard :: Integer -> Board -> String
