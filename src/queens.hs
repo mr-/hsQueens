@@ -20,7 +20,7 @@ main = foo 9
 foo :: Integer -> IO ()
 foo n = runInputT defaultSettings (loop $ fromTree $ prunedTree n)
   where added old new = head $ new \\ old 
-        showOpt options curBoard = outputStrLn $ foldr (\(a,b) y -> (show a) ++ ":" ++ (show b) ++ "  " ++ y) ""   
+        showOpt options curBoard = outputStrLn $ foldr (\(a,b) y -> show a ++ ":" ++ show b ++ "  " ++ y) ""   
                   (zip [0..] $ map (added curBoard) options) 
 
         loop :: TreePos Full Board -> InputT IO ()
@@ -34,7 +34,7 @@ foo n = runInputT defaultSettings (loop $ fromTree $ prunedTree n)
 
 
 interpret :: TreePos Full Board -> Command -> Either String (TreePos Full Board)
-interpret treePos Up | (isRoot treePos)  = Left "We are at the top"
+interpret treePos Up | isRoot treePos  = Left "We are at the top"
 interpret treePos Up  = Right $ fromJust $ parent treePos 
 
 interpret treePos (Go n) = case child of 
@@ -45,7 +45,7 @@ interpret treePos (Go n) = case child of
 interpret treePos (Auto n)   = case null found of
                                   True  -> Left "Nothing found"
                                   False -> Right $ head found 
-  where found = findPosBelow (\t -> length (rootLabel t) >= (fromInteger n)) treePos
+  where found = findPosBelow (\t -> length (rootLabel t) >= fromInteger n) treePos
 
 
 handleCommand :: TreePos Full Board -> InputT IO (TreePos Full Board)
@@ -54,16 +54,15 @@ handleCommand  treePos = do
   case readMaybe (fromJust inp) of
     Nothing   -> do outputStrLn "Invalid Command (Have Go N, Up and Auto N so far)"
                     handleCommand treePos
-    Just x    -> case (interpret treePos x) of
+    Just x    -> case interpret treePos x of
                     Left s  -> do outputStrLn s
                                   handleCommand treePos
                     Right t -> return t
 
 findPosBelow :: (Tree Board -> Bool) -> TreePos Full Board -> [TreePos Full Board]
-findPosBelow f pos | hasChildren pos = l ++ concatMap (findPosBelow f) childs
+findPosBelow f pos | hasChildren pos = [pos | f (tree pos)] ++ concatMap (findPosBelow f) childs
   where childs = unfoldr' next fc
         fc = fromJust $ firstChild pos
-        l = if f (tree pos) then [pos] else [] 
 
 findPosBelow f pos | f (tree pos) = [pos]
 findPosBelow _ _ = [] 
