@@ -18,12 +18,15 @@ main = foo 6
 foo :: Integer -> IO ()
 foo n = runInputT defaultSettings (loop $ fromTree $ prunedTree n)
   where added old new = head $ new \\ old 
+        showOpt options curBoard = outputStrLn $ foldr (\(a,b) y -> (show a) ++ ":" ++ (show b) ++ "  " ++ y) ""   
+                  (zip [0..] $ map (added curBoard) options) 
+                  
         loop :: TreePos Full Board -> InputT IO ()
         loop treePos = do
             let options = map rootLabel $ subForest $ tree treePos
                 curBoard = rootLabel $ tree treePos
             outputStrLn $ prettyBoard n $ rootLabel $ tree treePos 
-            outputStrLn $ show  $ zip [0..] $ map (added curBoard) options    
+            showOpt options curBoard
             tP <- handleCommand treePos
             loop tP
 
