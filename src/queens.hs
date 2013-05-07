@@ -13,14 +13,14 @@ type Board = [Pos]
 
 data Command = Auto Integer | Up | Go Integer deriving (Read)
 
-main = foo 6
+main = foo 9
  
 foo :: Integer -> IO ()
 foo n = runInputT defaultSettings (loop $ fromTree $ prunedTree n)
   where added old new = head $ new \\ old 
         showOpt options curBoard = outputStrLn $ foldr (\(a,b) y -> (show a) ++ ":" ++ (show b) ++ "  " ++ y) ""   
                   (zip [0..] $ map (added curBoard) options) 
-                  
+
         loop :: TreePos Full Board -> InputT IO ()
         loop treePos = do
             let options = map rootLabel $ subForest $ tree treePos

@@ -1,0 +1,9 @@
+name:     hsQueens
+version:  0.1
+build-type:     Simple
+cabal-version:  >= 1.2
+
+executable hsQueens 
+  build-depends:  base >= 4.6, rosezipper >= 0.2, haskeline >= 0.7, containers
+  main-is:        queens.hs
+  hs-source-dirs: src
