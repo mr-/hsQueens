@@ -59,11 +59,15 @@ handleCommand  treePos = do
                                         handleCommand treePos
                           Right t -> return t
 
+--findTreeBelow :: (Board -> Bool) -> Tree Board -> [Board]
+--findTreeBelow f (Node l ch)  = [l | f l] ++ rest
+--  where rest = concatMap (findTreeBelow f) ch
+  
 findPosBelow :: (Tree Board -> Bool) -> TreePos Full Board -> [TreePos Full Board]
-findPosBelow f pos | hasChildren pos = [pos | f (tree pos)] ++ concatMap (findPosBelow f) childs
-  where childs = unfoldr' next fc
+findPosBelow f pos | hasChildren pos = [pos | f (tree pos)] ++ rest
+  where rest = concatMap (findPosBelow f) childs
+        childs = fc:(unfoldr' next fc)
         fc = fromJust $ firstChild pos
-
 findPosBelow f pos | f (tree pos) = [pos]
 findPosBelow _ _ = [] 
 
