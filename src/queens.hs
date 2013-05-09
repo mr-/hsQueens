@@ -1,34 +1,50 @@
 import Data.Tree (Tree(..))
-import Data.List (union, (\\), intersect)
+import Data.List ((\\), sortBy)
 import Control.Applicative ( (<$>) )
-import Data.Tree.Zipper 
-import Data.Maybe (fromJust)
+import Control.Monad.Trans.Class (lift)
+import Data.Tree.Zipper ( childAt, fromTree, root, isRoot, 
+                          parent, tree, firstChild, next, hasChildren, 
+                          Full, TreePos )
+import Data.Maybe (fromJust, listToMaybe, fromMaybe)
 import Text.Read (readMaybe)
-import System.Console.Haskeline (outputStrLn, getInputLine, runInputT, defaultSettings, InputT)
+import System.Console.Haskeline (outputStrLn, getInputLine, runInputT, 
+                                 defaultSettings, InputT)
+import System.Environment (getArgs)
+import Data.Time (getZonedTime, formatTime)
+import System.Locale (defaultTimeLocale)
 
-type Pos = (Integer, Integer) 
+type Pos = (Integer, Integer)
 type Board = [Pos] 
 
 
 data Command = Auto Integer | Up | Top | Go Integer deriving (Read)
 
+
 main :: IO ()
-main = foo 9
+main = do args <- getArgs
+          let x = (listToMaybe args >>= readMaybe) :: Maybe Integer
+          runQueens $ fromMaybe 8 x
  
-foo :: Integer -> IO ()
-foo n = runInputT defaultSettings (loop $ fromTree $ prunedTree n)
+runQueens :: Integer -> IO ()
+runQueens n = runInputT defaultSettings (loop $ Just $ fromTree $ prunedTree n)
   where added old new = head $ new \\ old 
         showOpt options curBoard = outputStrLn $ foldr (\(a,b) y -> show a ++ ":" ++ show b ++ "  " ++ y) ""   
                   (zip [(0::Int)..] $ map (added curBoard) options) 
 
-        loop :: TreePos Full Board -> InputT IO ()
-        loop treePos = do
+        loop :: Maybe (TreePos Full Board) -> InputT IO ()
+        loop Nothing = outputStrLn "Bye bye"
+        loop (Just treePos) = do
             let options = map rootLabel $ subForest $ tree treePos
                 curBoard = rootLabel $ tree treePos
             outputStrLn $ prettyBoard n $ rootLabel $ tree treePos 
             showOpt options curBoard
             tP <- handleCommand treePos
             loop tP
+
+getTime :: IO String
+getTime = do
+          zt <- getZonedTime
+          return $ formatTime defaultTimeLocale "%H:%M:%S" zt
 
 
 interpret :: TreePos Full Board -> Command -> Either String (TreePos Full Board)
@@ -47,29 +63,28 @@ interpret treePos (Auto n)   = case null found of
   where found = findPosBelow (\t -> length (rootLabel t) >= fromInteger n) treePos
 
 
-handleCommand :: TreePos Full Board -> InputT IO (TreePos Full Board)
-handleCommand  treePos = do  
-  inp <- getInputLine "> "
+handleCommand :: TreePos Full Board -> InputT IO (Maybe (TreePos Full Board))
+handleCommand  treePos = do
+  time <- lift  getTime  
+  inp <- getInputLine (time ++ "> ")
   case readMaybe <$> inp of
-    Nothing        -> return treePos --haha
+    Nothing        -> return Nothing 
     Just Nothing   -> do outputStrLn "Invalid Command (Have Go N, Up, Top and Auto N so far)"
                          handleCommand treePos
     Just (Just x)    -> case interpret treePos x of
                           Left s  -> do outputStrLn s
                                         handleCommand treePos
-                          Right t -> return t
+                          Right t -> return (Just t)
 
---findTreeBelow :: (Board -> Bool) -> Tree Board -> [Board]
---findTreeBelow f (Node l ch)  = [l | f l] ++ rest
---  where rest = concatMap (findTreeBelow f) ch
   
 findPosBelow :: (Tree Board -> Bool) -> TreePos Full Board -> [TreePos Full Board]
 findPosBelow f pos | hasChildren pos = [pos | f (tree pos)] ++ rest
   where rest = concatMap (findPosBelow f) childs
-        childs = fc:(unfoldr' next fc)
+        childs = fc : unfoldr' next fc
         fc = fromJust $ firstChild pos
 findPosBelow f pos | f (tree pos) = [pos]
 findPosBelow _ _ = [] 
+
 
 unfoldr'      :: (a -> Maybe a) -> a -> [a]
 unfoldr' f b  =
@@ -79,8 +94,7 @@ unfoldr' f b  =
 
 
 prunedTree :: Integer -> Tree Board
-prunedTree n = pruneTree n $ buildTree n (Node [] [])
-
+prunedTree n = heuristics $ pruneTree $ buildTree n (Node [] [])
 
 
 positions :: Integer -> [Pos]
@@ -93,6 +107,25 @@ buildTree size (Node node _) = Node node descendents
             newBoards = map (:node) uniquePositions
             uniquePositions = positions size \\ node
 
+--this gets us from 15sec to < 1sec for the 8 queens problem
+heuristics :: Tree Board -> Tree Board
+heuristics (Node node subTrees) = Node node (sortBy childCount subTrees)
+  where 
+    childCount (Node _ x) (Node _ y) = length x `compare` length y 
+
+pruneTree :: Tree Board -> Tree Board
+pruneTree  (Node node subTrees) = Node node prunedSubs
+    where prunedSubs = map pruneTree goodDescendents
+          goodDescendents = filter (isGood node) subTrees
+          newPiece t = head $ rootLabel t
+          isGood board newBoard = staysConsistent board (newPiece newBoard)
+
+staysConsistent :: Board -> Pos -> Bool          
+staysConsistent board new = not $ any (isUnconsistentWith new) board
+    where  isUnconsistentWith (x,y) (x',y') = 
+            x == x' || y == y' || (x-x') == (y-y') || (x-x') == -(y-y') 
+
+{-}                            --can assume that new label arises by adding one node
 pruneTree :: Integer -> Tree Board -> Tree Board
 pruneTree size (Node node subTrees) = Node node prunedSubs
     where prunedSubs = map (pruneTree size) goodDescendents
@@ -118,7 +151,7 @@ activeNeighborhood size (x,y) = active
                                 , x + d > 0, x + d <= size
                                 , y - d > 0, y - d <= size]
           active = line1 `union` line2 `union` diag1 `union` diag2
-
+-}
 
 prettyBoard :: Integer -> Board -> String
 prettyBoard size board = unlines $ map concat [ [cell x y | x <- [1..size]] | y <- [1..size] ]
