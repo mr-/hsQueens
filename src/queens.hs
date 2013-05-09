@@ -13,8 +13,8 @@ import System.Environment (getArgs)
 import Data.Time (getZonedTime, formatTime)
 import System.Locale (defaultTimeLocale)
 
-type Pos = (Integer, Integer)
-type Board = [Pos] 
+type Piece = (Integer, Integer)
+type Board = [Piece] 
 
 
 data Command = Auto Integer | Up | Top | Go Integer deriving (Read)
@@ -26,20 +26,22 @@ main = do args <- getArgs
           runQueens $ fromMaybe 8 x
  
 runQueens :: Integer -> IO ()
-runQueens n = runInputT defaultSettings (loop $ Just $ fromTree $ prunedTree n)
-  where added old new = head $ new \\ old 
-        showOpt options curBoard = outputStrLn $ foldr (\(a,b) y -> show a ++ ":" ++ show b ++ "  " ++ y) ""   
-                  (zip [(0::Int)..] $ map (added curBoard) options) 
+runQueens n = runInputT defaultSettings (loop $ Just $ fromTree $ searchTree n)
+  where 
+        showOpt options  = outputStrLn $ foldr (\(a,b) y -> show a ++ ":" ++ show b ++ "  " ++ y) ""   
+                  (zip [(0::Int)..] $ map latest options) 
 
         loop :: Maybe (TreePos Full Board) -> InputT IO ()
         loop Nothing = outputStrLn "Bye bye"
         loop (Just treePos) = do
             let options = map rootLabel $ subForest $ tree treePos
-                curBoard = rootLabel $ tree treePos
             outputStrLn $ prettyBoard n $ rootLabel $ tree treePos 
-            showOpt options curBoard
+            showOpt options 
             tP <- handleCommand treePos
             loop tP
+
+latest :: Board -> Piece
+latest = head
 
 getTime :: IO String
 getTime = do
@@ -93,11 +95,11 @@ unfoldr' f b  =
    Nothing  -> []
 
 
-prunedTree :: Integer -> Tree Board
-prunedTree n = heuristics $ pruneTree $ buildTree n (Node [] [])
+searchTree :: Integer -> Tree Board
+searchTree n = heuristics $ pruneTree $ buildTree n (Node [] [])
 
 
-positions :: Integer -> [Pos]
+positions :: Integer -> [Piece]
 positions size = [ (x, y) | x <- [1..size], y <- [1..size]]
 
 
@@ -120,38 +122,11 @@ pruneTree  (Node node subTrees) = Node node prunedSubs
           newPiece t = head $ rootLabel t
           isGood board newBoard = staysConsistent board (newPiece newBoard)
 
-staysConsistent :: Board -> Pos -> Bool          
+staysConsistent :: Board -> Piece -> Bool          
 staysConsistent board new = not $ any (isUnconsistentWith new) board
     where  isUnconsistentWith (x,y) (x',y') = 
             x == x' || y == y' || (x-x') == (y-y') || (x-x') == -(y-y') 
 
-{-}                            --can assume that new label arises by adding one node
-pruneTree :: Integer -> Tree Board -> Tree Board
-pruneTree size (Node node subTrees) = Node node prunedSubs
-    where prunedSubs = map (pruneTree size) goodDescendents
-          goodDescendents = filter (isGood node) subTrees
-          isGood n subTree = staysConsistent size n 
-                            (head $ rootLabel subTree \\ n) 
-                            --can assume that new label arises by adding one node
-
-staysConsistent :: Integer -> Board -> Pos -> Bool
-staysConsistent size board piece = null $ intersect activeNeighs board 
-    where activeNeighs = activeNeighborhood size piece
-
-activeNeighborhood :: Integer -> Pos -> [Pos]
-activeNeighborhood size (x,y) = active
-    where line1 = [(x + d, y ) | d <- [(-size)..size]
-                                , x + d > 0, x + d <= size]
-          line2 = [(x , y + d) | d <- [(-size)..size]
-                                , y + d > 0, y + d <= size]
-          diag1 = [(x + d , y + d ) | d <- [(-size)..size]
-                                , x + d > 0, x + d <= size
-                                , y + d > 0, y + d <= size]
-          diag2 = [(x + d , y - d ) | d <- [(-size)..size]
-                                , x + d > 0, x + d <= size
-                                , y - d > 0, y - d <= size]
-          active = line1 `union` line2 `union` diag1 `union` diag2
--}
 
 prettyBoard :: Integer -> Board -> String
 prettyBoard size board = unlines $ map concat [ [cell x y | x <- [1..size]] | y <- [1..size] ]
