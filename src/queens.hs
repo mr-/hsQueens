@@ -1,6 +1,5 @@
 import Data.Tree (Tree(..))
 import Data.List ((\\), sortBy)
-import Control.Applicative ( (<$>) )
 import Control.Monad.Trans.Class (lift)
 import Data.Tree.Zipper ( childAt, fromTree, root, isRoot, 
                           parent, tree, firstChild, next, hasChildren, 
@@ -12,12 +11,13 @@ import System.Console.Haskeline (outputStrLn, getInputLine, runInputT,
 import System.Environment (getArgs)
 import Data.Time (getZonedTime, formatTime)
 import System.Locale (defaultTimeLocale)
+import Parser
 
 type Piece = (Integer, Integer)
 type Board = [Piece] 
 
-
-data Command = Auto Integer | Up | Top | Go Integer deriving (Read)
+-- type Expression = [Command]
+-- data Command = Auto Integer | Up | Top | Go Integer deriving (Read, Show)
 
 
 main :: IO ()
@@ -49,22 +49,37 @@ getTime = do
           return $ formatTime defaultTimeLocale "%H:%M:%S" zt
 
 
-interpret :: TreePos Full Board -> Command -> Either String (TreePos Full Board)
-interpret treePos Top = Right $ root treePos
-interpret treePos Up | isRoot treePos  = Left "We are at the top"
-interpret treePos Up  = Right $ fromJust $ parent treePos 
+interpretExpression :: Expression -> TreePos Full Board -> Either String (TreePos Full Board)
+interpretExpression [] _ = error "Internal Error in interpretExpression"
+interpretExpression [cmd] treePos = interpretCommand treePos cmd 
+interpretExpression (x:xs) treePos = interpretCommand treePos x >>= interpretExpression xs
 
-interpret treePos (Go n) = case child of 
+interpretCommand :: TreePos Full Board -> Command -> Either String (TreePos Full Board)
+interpretCommand treePos Top = Right $ root treePos
+interpretCommand treePos Up | isRoot treePos  = Left "We are at the top"
+interpretCommand treePos Up  = Right $ fromJust $ parent treePos 
+
+interpretCommand treePos (Go n) = case child of 
                               Nothing -> Left "No such choice"
                               Just x  -> Right x
   where child = childAt (fromInteger n) treePos
 
-interpret treePos (Auto n)   = case null found of
+interpretCommand treePos (Auto n)   = case null found of
                                   True  -> Left "Nothing found"
                                   False -> Right $ head found 
   where found = findPosBelow (\t -> length (rootLabel t) >= fromInteger n) treePos
 
-
+handleCommand :: TreePos Full Board -> InputT IO (Maybe (TreePos Full Board))
+handleCommand  treePos = do
+  time <- lift  getTime  
+  inp <- getInputLine (time ++ "> ")
+  case inp of
+    Nothing -> return Nothing 
+    Just text  -> case readExpr text >>= \cmd -> interpretExpression cmd treePos of
+                          Left s  -> do outputStrLn s
+                                        handleCommand treePos
+                          Right t -> return (Just t)
+{-                          
 handleCommand :: TreePos Full Board -> InputT IO (Maybe (TreePos Full Board))
 handleCommand  treePos = do
   time <- lift  getTime  
@@ -73,11 +88,11 @@ handleCommand  treePos = do
     Nothing        -> return Nothing 
     Just Nothing   -> do outputStrLn "Invalid Command (Have Go N, Up, Top and Auto N so far)"
                          handleCommand treePos
-    Just (Just x)    -> case interpret treePos x of
+    Just (Just x)    -> case interpretExpression x treePos of
                           Left s  -> do outputStrLn s
                                         handleCommand treePos
                           Right t -> return (Just t)
-
+-}
   
 findPosBelow :: (Tree Board -> Bool) -> TreePos Full Board -> [TreePos Full Board]
 findPosBelow f pos | hasChildren pos = [pos | f (tree pos)] ++ rest
@@ -130,4 +145,4 @@ staysConsistent board new = not $ any (isUnconsistentWith new) board
 
 prettyBoard :: Integer -> Board -> String
 prettyBoard size board = unlines $ map concat [ [cell x y | x <- [1..size]] | y <- [1..size] ]
-    where cell x y = if (x,y) `elem` board then "Q" else "_"
+    where cell x y = if (x,y) `elem` board then "Q" else "."
