@@ -3,13 +3,14 @@ hsQueens-Fun!
 
 It currently understands the commands
 
-Go N   -  chooses the option number N
+go N   -  chooses the option number N
 
-Up     -  goes up
+up     -  goes up
 
-Auto N -  looks for a board with at least N queens below the tree
+auto N -  looks for a board with at least N queens below the tree
 	  that is focused.
 
-Top   - all the way to the top!
+top   - all the way to the top!
 
-
+AND the "," combinator. It allows you to chain commands, as in
+go 0, auto 5, go 0

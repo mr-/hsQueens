@@ -19,10 +19,10 @@ parseUnary str = do _ <- string str
     where digits = many1 digit
 
 parseCmd :: Parser Command 
-parseCmd =  Auto  <$> parseUnary "Auto"
-        <|> Go  <$> parseUnary "Go"
-        <|> Up  <$ parseNullary "Up"
-        <|> Top <$ parseNullary "Top"
+parseCmd =  Auto  <$> parseUnary "auto"
+        <|> Go  <$> parseUnary "go"
+        <|> Up  <$ parseNullary "up"
+        <|> Top <$ parseNullary "top"
 
 parseExpr :: Parser Expression
 parseExpr = sepBy1 parseCmd sep
