@@ -55,6 +55,9 @@ interpretExpression [cmd] treePos = interpretCommand treePos cmd
 interpretExpression (x:xs) treePos = interpretCommand treePos x >>= interpretExpression xs
 
 interpretCommand :: TreePos Full Board -> Command -> Either String (TreePos Full Board)
+interpretCommand treePos (Des n) = Right $ fromTree $ toTree $ head $ findBelow f $ cutTreeBy f $ tree treePos
+  where f node = length node >= fromInteger n
+        toTree node = Node node [] 
 interpretCommand treePos Top = Right $ root treePos
 interpretCommand treePos Up | isRoot treePos  = Left "We are at the top"
 interpretCommand treePos Up  = Right $ fromJust $ parent treePos 
@@ -102,6 +105,9 @@ findPosBelow f pos | hasChildren pos = [pos | f (tree pos)] ++ rest
 findPosBelow f pos | f (tree pos) = [pos]
 findPosBelow _ _ = [] 
 
+findBelow :: (Board -> Bool) -> Tree Board -> [Board]
+findBelow p (Node node subTrees) = [node | p node] ++ concatMap (findBelow p) subTrees
+
 
 unfoldr'      :: (a -> Maybe a) -> a -> [a]
 unfoldr' f b  =
@@ -136,6 +142,15 @@ pruneTree  (Node node subTrees) = Node node prunedSubs
           goodDescendents = filter (isGood node) subTrees
           newPiece t = head $ rootLabel t
           isGood board newBoard = staysConsistent board (newPiece newBoard)
+
+
+cutTreeBy :: (Board -> Bool) -> Tree Board -> Tree Board
+cutTreeBy p (Node node subTrees) = Node node trimmedSubs
+  where trimmedSubs = map (cutTreeBy p) goodSubs 
+        goodSubs = filter (has p) subTrees
+
+has :: (Board -> Bool) -> Tree Board -> Bool
+has p (Node node subTrees) = p node || any (has p) subTrees
 
 staysConsistent :: Board -> Piece -> Bool          
 staysConsistent board new = not $ any (isUnconsistentWith new) board
