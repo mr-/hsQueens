@@ -5,13 +5,13 @@ import Text.Parsec.Char
 import Control.Applicative hiding ((<|>))
 
 type Expression = [Command]
-data Command = Des Integer | Auto Integer | Up | Top | Go Integer deriving (Read, Show)
+data Command = Des Int | Auto Int | Up | Top | Go Int deriving (Read, Show)
 
 
 parseNullary :: String -> Parser String
 parseNullary = string 
 
-parseUnary :: String -> Parser Integer
+parseUnary :: String -> Parser Int
 parseUnary str = do _ <- string str
                     _ <- many1 space 
                     d <- digits

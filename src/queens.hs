@@ -13,19 +13,19 @@ import Data.Time (getZonedTime, formatTime)
 import System.Locale (defaultTimeLocale)
 import Parser
 
-type Piece = (Integer, Integer)
+type Piece = (Int, Int)
 type Board = [Piece] 
 
 -- type Expression = [Command]
--- data Command = Auto Integer | Up | Top | Go Integer deriving (Read, Show)
+-- data Command = Auto Int | Up | Top | Go Int deriving (Read, Show)
 
 
 main :: IO ()
 main = do args <- getArgs
-          let x = (listToMaybe args >>= readMaybe) :: Maybe Integer
+          let x = (listToMaybe args >>= readMaybe) :: Maybe Int
           runQueens $ fromMaybe 8 x
  
-runQueens :: Integer -> IO ()
+runQueens :: Int -> IO ()
 runQueens n = runInputT defaultSettings (loop $ Just $ fromTree $ searchTree n)
   where 
         showOpt options  = outputStrLn $ foldr (\(a,b) y -> show a ++ ":" ++ show b ++ "  " ++ y) ""   
@@ -56,7 +56,7 @@ interpretExpression (x:xs) treePos = interpretCommand treePos x >>= interpretExp
 
 interpretCommand :: TreePos Full Board -> Command -> Either String (TreePos Full Board)
 interpretCommand treePos (Des n) = Right $ fromTree $ toTree $ head $ findBelow f $ cutTreeBy f $ tree treePos
-  where f node = length node >= fromInteger n
+  where f node = length node >=  n
         toTree node = Node node [] 
 interpretCommand treePos Top = Right $ root treePos
 interpretCommand treePos Up | isRoot treePos  = Left "We are at the top"
@@ -65,12 +65,12 @@ interpretCommand treePos Up  = Right $ fromJust $ parent treePos
 interpretCommand treePos (Go n) = case child of 
                               Nothing -> Left "No such choice"
                               Just x  -> Right x
-  where child = childAt (fromInteger n) treePos
+  where child = childAt  n treePos
 
 interpretCommand treePos (Auto n)   = case null found of
                                   True  -> Left "Nothing found"
                                   False -> Right $ head found 
-  where found = findPosBelow (\t -> length (rootLabel t) >= fromInteger n) treePos
+  where found = findPosBelow (\t -> length (rootLabel t) >= n) treePos
 
 handleCommand :: TreePos Full Board -> InputT IO (Maybe (TreePos Full Board))
 handleCommand  treePos = do
@@ -116,15 +116,15 @@ unfoldr' f b  =
    Nothing  -> []
 
 
-searchTree :: Integer -> Tree Board
+searchTree :: Int -> Tree Board
 searchTree n = heuristics $ pruneTree $ buildTree n (Node [] [])
 
 
-positions :: Integer -> [Piece]
+positions :: Int -> [Piece]
 positions size = [ (x, y) | x <- [1..size], y <- [1..size]]
 
 
-buildTree :: Integer -> Tree Board -> Tree Board
+buildTree :: Int -> Tree Board -> Tree Board
 buildTree size (Node node _) = Node node descendents
     where   descendents = [buildTree size (Node board []) | board <- newBoards]
             newBoards = map (:node) uniquePositions
@@ -158,6 +158,6 @@ staysConsistent board new = not $ any (isUnconsistentWith new) board
             x == x' || y == y' || (x-x') == (y-y') || (x-x') == -(y-y') 
 
 
-prettyBoard :: Integer -> Board -> String
+prettyBoard :: Int -> Board -> String
 prettyBoard size board = unlines $ map concat [ [cell x y | x <- [1..size]] | y <- [1..size] ]
     where cell x y = if (x,y) `elem` board then "Q" else "."
