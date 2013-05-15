@@ -20,6 +20,7 @@ runQueens n = do
     let tree = searchTree n
     putStrLn $ prettyBoard n $ head $ findBelow (\node -> length node >= n) tree
 
+
 findBelow :: (Board -> Bool) -> Tree Board -> [Board]
 findBelow p (Node node subTrees) = [node | p node] ++ concatMap (findBelow p) subTrees
 
@@ -38,7 +39,7 @@ buildTree size (Node node _) = Node node descendents
             newBoards = map (:node) uniquePositions
             uniquePositions = positions size \\ node
 
---this gets us from 15sec to < 1sec for the 8 queens problem
+
 heuristics :: Tree Board -> Tree Board
 heuristics (Node node subTrees) = Node node (sortBy childCount subTrees)
   where 
@@ -51,6 +52,10 @@ pruneTree  (Node node subTrees) = Node node prunedSubs
           newPiece t = head $ rootLabel t
           isGood board newBoard = staysConsistent board (newPiece newBoard)
 
+staysConsistent :: Board -> Piece -> Bool          
+staysConsistent board new = not $ any (isUnconsistentWith new) board
+    where  isUnconsistentWith (x,y) (x',y') = 
+            x == x' || y == y' || (x-x') == (y-y') || (x-x') == -(y-y') 
 
 cutTreeBy :: (Board -> Bool) -> Tree Board -> Tree Board
 cutTreeBy p (Node node subTrees) = Node node trimmedSubs
@@ -59,11 +64,6 @@ cutTreeBy p (Node node subTrees) = Node node trimmedSubs
 
 has :: (Board -> Bool) -> Tree Board -> Bool
 has p (Node node subTrees) = p node || any (has p) subTrees
-
-staysConsistent :: Board -> Piece -> Bool          
-staysConsistent board new = not $ any (isUnconsistentWith new) board
-    where  isUnconsistentWith (x,y) (x',y') = 
-            x == x' || y == y' || (x-x') == (y-y') || (x-x') == -(y-y') 
 
 
 prettyBoard :: Int -> Board -> String
