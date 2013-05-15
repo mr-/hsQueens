@@ -160,4 +160,4 @@ staysConsistent board new = not $ any (isUnconsistentWith new) board
 
 prettyBoard :: Int -> Board -> String
 prettyBoard size board = unlines $ map concat [ [cell x y | x <- [1..size]] | y <- [1..size] ]
-    where cell x y = if (x,y) `elem` board then "Q" else "."
+    where cell x y = if (x,y) `elem` board then "♛" else "."
