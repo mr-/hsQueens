@@ -1,8 +1,9 @@
 import Data.Tree (Tree(..))
 import Data.List ((\\), sortBy)
-import Data.Maybe (listToMaybe, fromMaybe)
+import Data.Maybe (listToMaybe, fromMaybe, fromJust)
 import Text.Read (readMaybe)
 import System.Environment (getArgs)
+import Data.Foldable (find)
 
 
 
@@ -16,16 +17,13 @@ main = do args <- getArgs
           runQueens $ fromMaybe 8 x
 
 runQueens :: Int -> IO ()
-runQueens n = do 
-    let tree = searchTree n
-    putStrLn $ prettyBoard n $ head $ findBelow (\node -> length node >= n) tree
+runQueens n =
+    putStrLn $ prettyBoard n $ fromJust $ find f $ cleanedTree n
+      where f node = length node >= n
 
 
-findBelow :: (Board -> Bool) -> Tree Board -> [Board]
-findBelow p (Node node subTrees) = [node | p node] ++ concatMap (findBelow p) subTrees
-
-searchTree :: Int -> Tree Board
-searchTree n = cutTreeBy f $ heuristics $ pruneTree $ buildTree n (Node [] [])
+cleanedTree :: Int -> Tree Board
+cleanedTree n = cutTreeBy f  $ pruneTree $ buildTree n (Node [] [])
     where f node = length node >= n
 
 
