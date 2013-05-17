@@ -12,8 +12,13 @@ executable hsQueens
   ghc-options:     -Wall -O2 -threaded
   hs-source-dirs: src
 
+<<<<<<< HEAD
 executable hsQueensMemoryTest 
   build-depends:    base >= 4.6,        containers
+=======
+executable hsQueensMemoryTest
+  build-depends:  base >= 4.6, containers
+>>>>>>> 7fee49c691eb72082109aa500ebe196030e7887e
   main-is:        memory-test.hs
   ghc-options:     -Wall -O2 -threaded
   hs-source-dirs: src
