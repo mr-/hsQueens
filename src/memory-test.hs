@@ -23,7 +23,7 @@ runQueens n =
 
 
 cleanedTree :: Int -> Tree Board
-cleanedTree n = cutTreeBy f  $ pruneTree $ buildTree n (Node [] [])
+cleanedTree n = cutTreeBy f  $ heuristics $ pruneTree $ buildTree n (Node [] [])
     where f node = length node >= n
 
 

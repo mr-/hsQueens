@@ -21,7 +21,7 @@ parseUnary str = do _ <- string str
 parseCmd :: Parser Command 
 parseCmd =  Auto  <$> parseUnary "auto"
         <|> Go  <$> parseUnary "go"
-        <|> Des <$> parseUnary "des"
+--        <|> Des <$> parseUnary "des"
         <|> Up  <$ parseNullary "up"
         <|> Top <$ parseNullary "top"
 
